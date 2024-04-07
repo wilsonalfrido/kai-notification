@@ -7,7 +7,11 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver import ActionChains
 
+import decorator
+import time
+import logging
 
+logger = logging.getLogger(__name__)
 
 def configure_driver():
     service = Service(executable_path="driver\chromedriver-win64\chromedriver.exe")
@@ -18,27 +22,32 @@ def configure_driver():
 
     return driver
 
-def tap_middle_of_element(driver: webdriver.Remote, element, wait=500, num_of_taps=1):
-    action = ActionChains(driver)
-    # Get the location and size of the element
-    element_location = element.location
-    element_size = element.size
-    
-    # Calculate the middle point of the element
-    middle_x = element_location['x'] + element_size['width'] / 2
-    middle_y = element_location['y'] + element_size['height'] / 2
-    element.click()
-    # for _ in range(num_of_taps):
-    #     action.move_to_element(element).click()
-
-def find_element_and_tap(driver: webdriver.Remote, by, value, use_position=False, wait_time=5):
-    wait = WebDriverWait(driver, wait_time)
-    element = wait.until(EC.presence_of_element_located((by,value)))
-
-    # if element.get_attribute("clickable") and not use_position:
-    #     element.click()
-    # else:
-    tap_middle_of_element(driver, element,1)
+def retry(howmany, **kwargs):
+    timewait=kwargs.get('timewait', 1.0) # seconds
+    timeout = kwargs.get('timeout', 0.0) # seconds
+    raise_error = kwargs.get('raise_error', True)
+    # exception_message=kwargs.get('exception_message', "ERROR")
+    # success_message=kwargs.get('exception_message', "SUCCESS")
+    time.sleep(timewait)
+    @decorator.decorator
+    def tryIt(func, *fargs, **fkwargs):
+        for trial in range(howmany):
+            try:
+                logger.info(f"Execute function {func.__name__} at {trial} trial") 
+                return func(*fargs, **fkwargs)
+            except Exception as e:
+                error_msg = f'Error in {func.__name__} function at {trial+1} trial : {e}'
+                logger.error(f'{error_msg}')
+                # logger.error(e)
+                # on every exception, write down where does the exception and how many tries attempted
+                if timeout is not None: time.sleep(timeout)
+            # if the last attempt failed, raise exception
+        if raise_error:
+            raise Exception(f'{error_msg}')
+        else:
+            logger.error(f'{error_msg}')
+            
+    return tryIt
 
 def fill_book_data(book_data:dict):
  """
