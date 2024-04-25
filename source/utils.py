@@ -18,7 +18,17 @@ def configure_driver():
     chrome_options = Options()
 
     chrome_options.add_experimental_option("detach",False)
+    chrome_options.add_argument("--headless=new")
+    chrome_options.add_argument("--disable-webusb")
+
+    prefs = {
+        "profile.default_content_setting_values.webusb": 1  # 1 to disable, 2 to enable
+    }
+    chrome_options.add_experimental_option("prefs", prefs)
+
+    # Step 3: Add preferences to Chrome options
     driver = webdriver.Chrome(service=service,options=chrome_options)
+    driver.maximize_window()
 
     return driver
 
