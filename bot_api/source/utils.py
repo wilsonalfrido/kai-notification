@@ -14,7 +14,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 def configure_driver():
-    service = Service(executable_path="driver\chromedriver-win64\chromedriver.exe")
+    service = Service(executable_path="chromedriver-win64\chromedriver.exe")
     chrome_options = Options()
 
     chrome_options.add_experimental_option("detach",False)

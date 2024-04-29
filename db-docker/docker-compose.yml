@@ -3,6 +3,7 @@ version: "3"
 services:
   database:
     image: "postgres:latest"
+    container_name: pg_ml_project
     ports:
       - 5432:5432
     env_file:
@@ -10,7 +11,7 @@ services:
     networks:
       - postgres-network
     volumes:
-      - ./ddl:/docker-entrypoint-initdb.d
+      - ./data:/docker-entrypoint-initdb.d
 
 networks:
   postgres-network:

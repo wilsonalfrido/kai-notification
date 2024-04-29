@@ -22,6 +22,8 @@ from databases.sqlalchemy.utils import insert_db_scheduler_tasks
 from source.calendar import create_calendar, process_calendar_selection
 from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
 
+from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
+
 logger = create_logger(__name__)
 
 test_data = {
@@ -31,11 +33,21 @@ test_data = {
 }
 CHECK_TICKET,ADD_SCHEDULER,INPUT_BOOK_DATA,ORIGIN,DESTINATION,DATE,INTERVAL_SCHEDULER,DELETE_SCHEDULER_CONFIRMATION,DELETE_SCHEDULER_ACTION = range(9)
 
+executors = {
+    'default': ThreadPoolExecutor(5),
+    'processpool': ProcessPoolExecutor(5)
+}
+job_defaults = {
+    'coalesce': False,
+    'max_instances': 3
+}
 
 class KaiNotifBot:
     def __init__(self,token) -> None:
         self.token = token
-        self.scheduler = BackgroundScheduler()
+        self.scheduler = BackgroundScheduler(logger=logger,
+                                             job_defaults={'misfire_grace_time': 15*60},
+                                             executors=executors)
         self.application = Application.builder().token(token).build()
         self.scheduler.start()
 
@@ -112,6 +124,8 @@ class KaiNotifBot:
             ticket_data_str,
             parse_mode=ParseMode.MARKDOWN_V2
         )
+    
+        return ConversationHandler.END
 
     async def add_scheduler(self,update: Update, context: ContextTypes.DEFAULT_TYPE):  
         context.user_data["interval_scheduler"] = int(update.message.text)
@@ -138,6 +152,8 @@ class KaiNotifBot:
                                minutes=int(context.user_data["interval_scheduler"]), 
                                id=id)
         logger.info(f'Succesfully Add scheduler task of user with id : {chat_id}')
+
+        return ConversationHandler.END
 
     async def cancel(self,update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """Cancels and ends the conversation."""
