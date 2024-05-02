@@ -1,7 +1,13 @@
 import logging
-
+import os
 
 def create_logger(logger_name: str):
+
+    logs_directory = './logs'
+
+    if not os.path.exists(logs_directory):
+        os.makedirs(logs_directory)
+
 
     logging.basicConfig(
         level=logging.INFO,
