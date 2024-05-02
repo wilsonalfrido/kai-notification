@@ -8,10 +8,10 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from source.logger import create_logger
 logger = create_logger(__name__)
 
-async def notif_scheduler_task(scheduler:BackgroundScheduler,id,token,chat_id,input_book_data,interval):
+async def notif_scheduler_task(scheduler:BackgroundScheduler,id,token,chat_id,input_book_data,interval,stage):
     bot = Bot(token=token)
 
-    df_ticket_data = get_ticket_data(input_book_data)
+    df_ticket_data = get_ticket_data(input_book_data,stage)
 
     if(df_ticket_data is None):
         scheduler_str = get_scheduler_by_id_str(id=id)
@@ -24,9 +24,9 @@ async def notif_scheduler_task(scheduler:BackgroundScheduler,id,token,chat_id,in
 
     await bot.send_message(chat_id=chat_id, text=ticket_data_str,parse_mode=ParseMode.MARKDOWN_V2)
 
-def run_notif_scheduler_task(scheduler:BackgroundScheduler,id,token,chat_id,input_book_data,interval=None):
+def run_notif_scheduler_task(scheduler:BackgroundScheduler,id,token,chat_id,input_book_data,stage,interval=None):
 
-    asyncio.run(notif_scheduler_task(scheduler,id,token,chat_id,input_book_data,interval))
+    asyncio.run(notif_scheduler_task(scheduler,id,token,chat_id,input_book_data,interval,stage))
 
 def get_list_notif_scheduler_str(chat_id) -> str:
     df_list_scheduler = get_db_list_active_scheduler_user(chat_id)

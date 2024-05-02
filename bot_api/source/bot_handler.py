@@ -43,8 +43,9 @@ job_defaults = {
 }
 
 class KaiNotifBot:
-    def __init__(self,token) -> None:
+    def __init__(self,token,stage) -> None:
         self.token = token
+        self.stage=stage
         self.scheduler = BackgroundScheduler(logger=logger,
                                              job_defaults={'misfire_grace_time': 15*60},
                                              executors=executors)
@@ -117,7 +118,7 @@ class KaiNotifBot:
             "destination": context.user_data["destination"],
             "depart_date" : context.user_data["depart_date"]
         }
-        df_ticket_data = get_ticket_data(input_book_data)
+        df_ticket_data = get_ticket_data(input_book_data,self.stage)
         ticket_data_str = get_ticket_data_str(df_ticket_data,input_book_data)
             
         await update.message.reply_text(
@@ -147,7 +148,7 @@ class KaiNotifBot:
         }
 
         logger.info(f'Add scheduler task of user with id : {chat_id}')
-        self.scheduler.add_job(func= run_notif_scheduler_task,args=(self.scheduler,id,self.token,chat_id,input_book_data,context.user_data["interval_scheduler"]), 
+        self.scheduler.add_job(func= run_notif_scheduler_task,args=(self.scheduler,id,self.token,chat_id,input_book_data,self.stage,context.user_data["interval_scheduler"]), 
                                trigger='interval',
                                minutes=int(context.user_data["interval_scheduler"]), 
                                id=id)

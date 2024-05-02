@@ -1,0 +1,23 @@
+version: '3'
+
+services:
+  db:
+    image: "postgres:latest"
+    ports:
+      - 5432:5432
+    env_file:
+      - ./db-docker/.env
+    networks:
+      - postgres-network
+    volumes:
+      - ./db-docker/data:/docker-entrypoint-initdb.d
+  api:
+    build: ./bot_api
+    env_file:
+      - ./bot_api/.env
+    networks:
+      - postgres-network
+
+networks:
+  postgres-network:
+    driver: bridge

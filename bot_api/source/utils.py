@@ -5,6 +5,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver import ActionChains
 
 import decorator
@@ -13,21 +14,31 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def configure_driver():
-    service = Service(executable_path="chromedriver-win64\chromedriver.exe")
+def configure_driver(stage):
+
     chrome_options = Options()
 
-    chrome_options.add_experimental_option("detach",False)
+    
     chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--disable-webusb")
 
     prefs = {
         "profile.default_content_setting_values.webusb": 1  # 1 to disable, 2 to enable
     }
-    chrome_options.add_experimental_option("prefs", prefs)
-
+    logger.info(f'Configuring server for {stage} ... level')
+    
     # Step 3: Add preferences to Chrome options
-    driver = webdriver.Chrome(service=service,options=chrome_options)
+    if(stage=="DEV"):
+        chrome_options.add_experimental_option("detach",False)
+        chrome_options.add_experimental_option("prefs", prefs)
+        service = Service(executable_path="E:/ML Project/KAI Notification/bot_api/driver/windows/chromedriver.exe")
+        driver = webdriver.Chrome(service=service,options=chrome_options)
+    elif(stage=="PROD"):
+        chrome_options.add_argument('--no-sandbox')
+        chrome_options.add_argument('--disable-dev-shm-usage')
+        service = Service(executable_path="../driver/linux/chromedriver")
+        driver = webdriver.Chrome(options=chrome_options)
+
     driver.maximize_window()
 
     return driver
