@@ -186,6 +186,7 @@ def scrap_all_ticket(driver:webdriver) -> pd.DataFrame:
 
     df_ticket_data = pd.DataFrame(ticket_data)
     df_ticket_data = df_ticket_data[df_ticket_data["is_avail"] == True].copy()
+    logger.info(f'Result : {df_ticket_data}')
     logger.info(f'Found {df_ticket_data.shape[0]} data ...')
 
     return df_ticket_data
