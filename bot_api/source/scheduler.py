@@ -22,7 +22,8 @@ async def notif_scheduler_task(scheduler:BackgroundScheduler,id,token,chat_id,in
     else:
         ticket_data_str = get_ticket_data_str(df_ticket_data,input_book_data,interval)
 
-    await bot.send_message(chat_id=chat_id, text=ticket_data_str,parse_mode=ParseMode.MARKDOWN_V2)
+    if(ticket_data_str):
+        await bot.send_message(chat_id=chat_id, text=ticket_data_str,parse_mode=ParseMode.MARKDOWN_V2)
 
 def run_notif_scheduler_task(scheduler:BackgroundScheduler,id,token,chat_id,input_book_data,stage,interval=None):
 

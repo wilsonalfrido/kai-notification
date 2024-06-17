@@ -61,8 +61,11 @@ def get_ticket_data_str(df_ticket_data: pd.DataFrame,book_data:dict,interval=Non
                 "-".join(table_data[0]), 
                 "\n".join(["-".join(row) for row in (table_data[1:])])
             ) 
+        elif(interval and df_ticket_data.shape[0] == 0):
+            table_str = None
         else:
             table_str = '`**KAI Ticket Scheduler**`\n' + '**Ticket Doesn\'t Exist\!**'
+            # table_str = None
     else:
         table_str = '`**KAI Ticket Scheduler**`\n' + '**Expired Book Date**'
 
@@ -182,5 +185,6 @@ def scrap_all_ticket(driver:webdriver) -> pd.DataFrame:
         ticket_data.append(temp)
 
     df_ticket_data = pd.DataFrame(ticket_data)
+    df_ticket_data = df_ticket_data[df_ticket_data["is_avail"] == True].copy()
 
     return df_ticket_data
