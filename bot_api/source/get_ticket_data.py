@@ -176,17 +176,18 @@ def scrap_all_ticket(driver:webdriver) -> pd.DataFrame:
         availibility_status = wait.until(EC.presence_of_element_located((By.XPATH, f'//*[@id="data{i}"]/a/div/div[3]/div/small'))).text
         is_avail = (False if availibility_status == "Habis" else True)
 
-        temp = {
-            "class" : ticket_class,
-            "depart_time" : depart_time,
-            "is_avail" : is_avail
-        }
+        if(is_avail):
+            temp = {
+                "class" : ticket_class,
+                "depart_time" : depart_time,
+                "is_avail" : is_avail
+            }
 
-        ticket_data.append(temp)
+            ticket_data.append(temp)
 
     df_ticket_data = pd.DataFrame(ticket_data)
     df_ticket_data = df_ticket_data[df_ticket_data["is_avail"] == True].copy()
     logger.info(f'Result : {df_ticket_data}')
-    logger.info(f'Found {df_ticket_data.shape[0]} data ...')
+    logger.info(f'Found {df_ticket_data.shape[0]} datas ...')
 
     return df_ticket_data
