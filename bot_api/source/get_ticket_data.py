@@ -1,48 +1,28 @@
-from selenium import webdriver
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver import ActionChains
-
-from source.utils import retry
-from source.utils import configure_driver
+import requests
+from bs4 import BeautifulSoup
 from datetime import datetime
-import time
-
 import pandas as pd
+from urllib.parse import urlencode
+import logging
 
-from source.logger import create_logger
-logger = create_logger(__name__)
-##################################################################### MAIN #####################################################################
+from databases.sqlalchemy.utils import get_db_list_stations
+from source.utils import retry
+logger = logging.getLogger(__name__)
 
+@retry(3, timeout=5, timewait=1)
 def get_ticket_data(book_data:dict,stage) -> pd.DataFrame:
-
-    driver = configure_driver(stage)
-    # driver.get("https://booking.kai.id/")
-    # driver.refresh()
-    # driver.refresh()
-
-
     book_date = datetime.strptime(book_data["depart_date"], "%d-%m-%Y").date()
     now_date = datetime.today().date()
-    action = ActionChains(driver)
 
-    
     if(now_date <= book_date):
-        #1. Fill book data and submit
-        fill_book_data(driver,book_data,action)
-        time.sleep(5)
-
-        #2. get all tickets data
-        df_ticket_data = scrap_all_ticket(driver)
-        driver.quit()
-        
+        content = get_api_booking_content(book_data)
+        df_ticket_data = parse_request_api(content)
         return df_ticket_data
     else:
+        logger.info("Expired book date")
         return None
 
 def get_ticket_data_str(df_ticket_data: pd.DataFrame,book_data:dict,interval=None) -> str:
-
     if(isinstance(df_ticket_data,pd.DataFrame)):
         if(df_ticket_data.shape[0] > 0):
             df_ticket_data = df_ticket_data[df_ticket_data["is_avail"] == True].copy()
@@ -72,122 +52,87 @@ def get_ticket_data_str(df_ticket_data: pd.DataFrame,book_data:dict,interval=Non
 
     return table_str
 
-##################################################################### UTILS #####################################################################
+def get_api_booking_content(book_data) -> str:
+    def form_booking_url(origination, flexdatalist_origination, destination, flexdatalist_destination, tanggal):
+        """Form the booking URL with the given parameters."""
+        base_url = "https://booking.kai.id/"
+        params = {
+            "origination": origination,
+            "flexdatalist-origination": flexdatalist_origination,
+            "destination": destination,
+            "flexdatalist-destination": flexdatalist_destination,
+            "tanggal": tanggal,
+            "adult": 1,
+            "infant": 0,
+            "submit": "Cari & Pesan Tiket"
+        }
+        return base_url + "?" + urlencode(params)
 
-@retry(3, timeout=5, timewait=1)
-def fill_book_data(driver: webdriver,book_data:dict,action:ActionChains):
-    """
-    book_data.keys = origin,destination,depart_date : DD-MM-YYYY,
-    """
-    driver.get("https://booking.kai.id/")
-    driver.refresh()
-    driver.refresh()
-    wait: WebDriverWait = WebDriverWait(driver, 10)
+    def fetch_url_content(url):
+        response = requests.get(url)
+        if response.status_code == 200:
+            return response.text
+        else:
+            response.raise_for_status()  # This will raise an HTTPError if the status is 4xx, 5xx
 
-    #1. fill origin place
-    logger.info("Filling origin place ...")
-    fill_origin_place(driver,book_data)
+    content = None
+    origin = str(book_data["origin"]).upper()
+    destination = str(book_data["destination"]).upper()
+    depart_date = book_data["depart_date"]
 
-    #2. fill destination place
-    logger.info('Filling destination place ...')
-    fill_destination_place(driver,book_data)
+    station_dict = get_station_code_dict()
 
-    #3 fill depart date
-    logger.info('Filling depart date ...')
-    fill_depart_date(driver,book_data,action)
-
-    #4. submit
-    logger.info('Submitting book data ...')
-    try:
-        submit_element = wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="submit"]')))
-        # action.move_to_element(wait.until(EC.element_to_be_clickable(submit_element))).click().perform()
-        submit_element.click()
-    except:
-        submit_element = wait.until(EC.presence_of_element_located((By.CLASS_NAME, 'btn sample btn-sample btn-search-booking')))
-        submit_element.click()
-
-
-# @retry(2, timeout=5, timewait=1)
-def fill_origin_place(driver,book_data):
-    wait: WebDriverWait = WebDriverWait(driver, 10)
-    origin_element = wait.until(EC.presence_of_element_located((By.ID, 'origination-flexdatalist')))
-    origin_element.send_keys(book_data["origin"])
-    wait.until(EC.presence_of_element_located((By.XPATH,'//*[@id="origination-flexdatalist-results"]/li[2]'))).click()
-
-# @retry(2, timeout=5, timewait=1)
-def fill_destination_place(driver,book_data):
-    wait: WebDriverWait = WebDriverWait(driver, 10)
-    destination_element = wait.until(EC.presence_of_element_located((By.ID, 'destination-flexdatalist')))
-    destination_element.send_keys(book_data["destination"])
-    wait.until(EC.presence_of_element_located((By.XPATH,'//*[@id="destination-flexdatalist-results"]/li[2]'))).click()
-
-# @retry(2, timeout=5, timewait=1)
-def fill_depart_date(driver: webdriver,book_data,action:ActionChains):
-    wait: WebDriverWait = WebDriverWait(driver, 10)
-    depart_date = book_data["depart_date"].split("-")
-
-    dep_day = int(depart_date[0])
-    dep_month = int(depart_date[1])
-    dep_year = int(depart_date[2])
-    #TODO debug if there are more than 1 available year
+    if(origin in station_dict.keys()):
+        origin_code = station_dict[origin]
+    else:
+        raise ValueError(f'Origin code of {origin} is not exist')
     
-    wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="departure_dateh"]'))).click()
-    month_min = int(wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="ui-datepicker-div"]/div/div/select[1]/option[1]'))).get_attribute("value"))
-
-    logger.info(f'Month min : {month_min}')
-    # driver.save_screenshot("./screenshot_2.png")
-
-    month_click = wait.until(EC.presence_of_element_located((By.CLASS_NAME, 'ui-datepicker-month')))
-    action.move_to_element(wait.until(EC.element_to_be_clickable(month_click)))
-    action.click().perform()
-
-    month_index = (dep_month-month_min)
-    month_min = wait.until(EC.presence_of_element_located((By.XPATH, f'//*[@id="ui-datepicker-div"]/div/div/select[1]/option[{month_index}]'))).click()
-
+    if(destination in station_dict.keys()):
+        destination_code = station_dict[destination]
+    else:
+        raise ValueError(f'Destination code of {origin} is not exist')
+    
+    url = form_booking_url(origination=origin_code,
+                           flexdatalist_origination=origin,
+                           destination=destination_code,
+                           flexdatalist_destination=destination,
+                           tanggal=depart_date)
+    
     try:
-        days_element = wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, 'ui-state-default')))
-        days_element[dep_day-1].click()
-    except:
-        days_element = wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, 'ui-state-default')))
-        action.move_to_element(days_element[dep_day-1])
-        action.click()
-        action.perform()
+        content = fetch_url_content(url)
+    except requests.exceptions.HTTPError as http_err:
+        logger.error(f'HTTP error occurred: {http_err}')
+    except Exception as err:
+        logger.error(f'Other error occurred: {err}')
+    
+    return content
 
-@retry(2, timeout=5, timewait=1)
-def scrap_all_ticket(driver:webdriver) -> pd.DataFrame:
-    driver.save_screenshot("./screenshot.png")
-    wait: WebDriverWait = WebDriverWait(driver, 15)
-    try:
-        try:
-            num_ticket = len(wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, 'data-wrapper'))))
-        except:
-            num_ticket = len(wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, 'data-block list-kereta'))))
-    except:
-        wait.until(EC.presence_of_element_located((By.CLASS_NAME, 'notice-wrapper')))
-        num_ticket = 0
-
+def parse_request_api(content):
     ticket_data = []
+    if(content):
+        soup = BeautifulSoup(content, 'html.parser')
+        data_wrapper = soup.find_all('div', class_='data-wrapper')
 
-    # logger.info(f'Found {num_ticket} data ...')
+        for data in data_wrapper:
+            ticket_class = data.find("div", {"class": "{kelas kereta}"}).text
+            depart_time = data.find("div", {"class": ["times","time-start"]}).text
+            is_avail = data.find("small", {"class": ["form-text","sisa-kursi"]}).text
 
-    for i in range(0,num_ticket):
-        ticket_class = wait.until(EC.presence_of_element_located((By.XPATH, f'//*[@id="data{i}"]/a/div/div[1]/div/div[2]'))).text
-        depart_time = wait.until(EC.presence_of_element_located((By.XPATH, f'//*[@id="data{i}"]/a/div/div[2]/div/div/div[1]/div[2]'))).text
-        availibility_status = wait.until(EC.presence_of_element_located((By.XPATH, f'//*[@id="data{i}"]/a/div/div[3]/div/small'))).text
-        is_avail = (False if availibility_status == "Habis" else True)
-
-        if(is_avail):
-            temp = {
-                "class" : ticket_class,
-                "depart_time" : depart_time,
-                "is_avail" : is_avail
-            }
-
-            ticket_data.append(temp)
-
+            if(is_avail.lower() != "habis"):
+                temp = {
+                    "class" : ticket_class,
+                    "depart_time" : depart_time,
+                    "is_avail" : True                    
+                }
+                ticket_data.append(temp)
+    
     df_ticket_data = pd.DataFrame(ticket_data)
-    # df_ticket_data = df_ticket_data[df_ticket_data["is_avail"] == True].copy()
-    logger.info(f'Result : {df_ticket_data}')
-    logger.info(f'Found {df_ticket_data.shape[0]} datas ...')
 
     return df_ticket_data
+
+def get_station_code_dict() -> dict:
+    df_list_station = get_db_list_stations()
+    station_code_dict = df_list_station[["name","code"]].set_index("name")["code"].to_dict()    
+
+    return station_code_dict
+

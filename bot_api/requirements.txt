@@ -38,3 +38,4 @@ tzlocal==5.2
 urllib3==2.2.1
 webdriver-manager==4.0.1
 wsproto==1.2.0
+beautifulsoup4==4.12.2

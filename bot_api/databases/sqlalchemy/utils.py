@@ -1,4 +1,5 @@
 from databases.sqlalchemy.models.scheduler_tasks import SchedulerTasks
+from databases.sqlalchemy.models.stations import Stations
 from databases.sqlalchemy.database import Database
 import uuid
 from sqlalchemy import func
@@ -59,6 +60,11 @@ def update_db_scheduler_status(id:str):
         id=id,
         updates={"status": "non active","updated_at":func.now()},
     )
+
+def get_db_list_stations():
+    df_list_stations = db_client.read(target=Stations)
+
+    return df_list_stations
 
 
 
