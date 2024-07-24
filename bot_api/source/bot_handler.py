@@ -226,7 +226,7 @@ class KaiNotifBot:
         }
 
         logger.info(f'Add scheduler task of user with id : {chat_id}')
-        self.scheduler.add_job(func= run_notif_scheduler_task,args=(self.scheduler,id,self.token,chat_id,input_book_data,self.stage,context.user_data["interval_scheduler"]), 
+        self.scheduler.add_job(func= run_notif_scheduler_task,args=(self.scheduler,id,self.token,chat_id,input_book_data,self.stage,",".join(context.user_data['selected_tickets']),context.user_data["interval_scheduler"]), 
                                trigger='interval',
                                minutes=int(context.user_data["interval_scheduler"]), 
                                id=id)
