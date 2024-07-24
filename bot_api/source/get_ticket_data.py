@@ -9,20 +9,20 @@ from databases.sqlalchemy.utils import get_db_list_stations
 from source.utils import retry
 logger = logging.getLogger(__name__)
 
-@retry(3, timeout=5, timewait=1)
-def get_ticket_data(book_data:dict,stage) -> pd.DataFrame:
+# @retry(2, timeout=5, timewait=1)
+def get_ticket_data(book_data:dict,stage,list_filter_ticket_code) -> pd.DataFrame:
     book_date = datetime.strptime(book_data["depart_date"], "%d-%m-%Y").date()
     now_date = datetime.today().date()
 
     if(now_date <= book_date):
         content = get_api_booking_content(book_data)
-        df_ticket_data = parse_request_api(content)
+        df_ticket_data = parse_request_api(content,list_filter_ticket_code)
         return df_ticket_data
     else:
         logger.info("Expired book date")
         return None
 
-def get_ticket_data_str(df_ticket_data: pd.DataFrame,book_data:dict,interval=None) -> str:
+def get_ticket_data_str(df_ticket_data,book_data:dict,interval=None) -> str:
     if(isinstance(df_ticket_data,pd.DataFrame)):
         if(df_ticket_data.shape[0] > 0):
             df_ticket_data = df_ticket_data[df_ticket_data["is_avail"] == True].copy()
@@ -51,6 +51,25 @@ def get_ticket_data_str(df_ticket_data: pd.DataFrame,book_data:dict,interval=Non
 
 
     return table_str
+
+@retry(2, timeout=5, timewait=1)
+def get_list_ticket(book_data:dict) -> dict:
+    ticket_dict = {}
+    content = get_api_booking_content(book_data)
+    if(content):
+        soup = BeautifulSoup(content, 'html.parser')
+        data_wrapper = soup.find_all('div', class_='data-wrapper')
+
+        for data in data_wrapper:
+            ticket_sub_code= data.find("input",{"name":"nokereta"})["value"]
+            ticket_class = data.find("div", {"class": "{kelas kereta}"}).text
+
+            ticket_code = f'{ticket_sub_code}_{ticket_class}'
+            depart_time = data.find("div", {"class": ["times","time-start"]}).text
+            ticket_dict[ticket_code] = f'{ticket_class} {depart_time}'
+    
+    return ticket_dict
+
 
 def get_api_booking_content(book_data) -> str:
     def form_booking_url(origination, flexdatalist_origination, destination, flexdatalist_destination, tanggal):
@@ -107,7 +126,7 @@ def get_api_booking_content(book_data) -> str:
     
     return content
 
-def parse_request_api(content):
+def parse_request_api(content,list_filter_ticket_code):
     ticket_data = []
     if(content):
         soup = BeautifulSoup(content, 'html.parser')
@@ -118,7 +137,12 @@ def parse_request_api(content):
             depart_time = data.find("div", {"class": ["times","time-start"]}).text
             is_avail = data.find("small", {"class": ["form-text","sisa-kursi"]}).text
 
-            if(is_avail.lower() != "habis"):
+            ticket_sub_code= data.find("input",{"name":"nokereta"})["value"]
+            ticket_class = data.find("div", {"class": "{kelas kereta}"}).text
+
+            ticket_code = f'{ticket_sub_code}_{ticket_class}'
+
+            if((is_avail.lower() != "habis")and(ticket_code in list_filter_ticket_code)):
                 temp = {
                     "class" : ticket_class,
                     "depart_time" : depart_time,

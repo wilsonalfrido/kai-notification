@@ -10,7 +10,7 @@ from databases.configs import DB_ENGINE
 
 db_client = Database(DB_ENGINE=DB_ENGINE)
 
-def insert_db_scheduler_tasks(chat_id:str,origin:str,destination:str,depart_date:str,depart_time:str,interval_scheduler:int):
+def insert_db_scheduler_tasks(chat_id:str,origin:str,destination:str,depart_date:str,depart_time:str,interval_scheduler:int,list_ticket_code:str):
     id = str(uuid.uuid4())
     new_task = SchedulerTasks(
         id = id,
@@ -19,7 +19,8 @@ def insert_db_scheduler_tasks(chat_id:str,origin:str,destination:str,depart_date
         destination = destination,
         depart_date = depart_date,
         depart_time = depart_time,
-        interval_scheduler =  interval_scheduler
+        interval_scheduler =  interval_scheduler,
+        list_ticket_code  = list_ticket_code 
     )
 
     db_client.insert(new_task)

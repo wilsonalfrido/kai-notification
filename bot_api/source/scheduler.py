@@ -8,10 +8,10 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from source.logger import create_logger
 logger = create_logger(__name__)
 
-async def notif_scheduler_task(scheduler:BackgroundScheduler,id,token,chat_id,input_book_data,interval,stage):
+async def notif_scheduler_task(scheduler:BackgroundScheduler,id,token,chat_id,input_book_data,interval,stage,list_filter_ticket_code:list):
     bot = Bot(token=token)
 
-    df_ticket_data = get_ticket_data(input_book_data,stage)
+    df_ticket_data = get_ticket_data(input_book_data,stage,list_filter_ticket_code)
 
     if(df_ticket_data is None):
         scheduler_str = get_scheduler_by_id_str(id=id)
@@ -25,9 +25,9 @@ async def notif_scheduler_task(scheduler:BackgroundScheduler,id,token,chat_id,in
     if(ticket_data_str):
         await bot.send_message(chat_id=chat_id, text=ticket_data_str,parse_mode=ParseMode.MARKDOWN_V2)
 
-def run_notif_scheduler_task(scheduler:BackgroundScheduler,id,token,chat_id,input_book_data,stage,interval=None):
+def run_notif_scheduler_task(scheduler:BackgroundScheduler,id,token,chat_id,input_book_data,stage,list_filter_ticket_code,interval=None):
 
-    asyncio.run(notif_scheduler_task(scheduler,id,token,chat_id,input_book_data,interval,stage))
+    asyncio.run(notif_scheduler_task(scheduler,id,token,chat_id,input_book_data,interval,stage,list_filter_ticket_code))
 
 def get_list_notif_scheduler_str(chat_id) -> str:
     df_list_scheduler = get_db_list_active_scheduler_user(chat_id)
@@ -70,9 +70,10 @@ def run_all_active_scheduler(token,scheduler:BackgroundScheduler):
         input_book_data = {
             "origin": temp_df["origin"].values[0],
             "destination": temp_df["destination"].values[0],
-            "depart_date" : temp_df["depart_date"].values[0]      
+            "depart_date" : temp_df["depart_date"].values[0],  
         }
-        scheduler.add_job(func=run_notif_scheduler_task,args=(scheduler,id,token,temp_df["chat_id"].values[0],input_book_data,temp_df["interval_scheduler"].values[0]),trigger="interval",minutes=int(temp_df["interval_scheduler"].values[0]),id=id)
+        list_filter_ticket_code = (temp_df.loc[0,"list_ticket_code"]).split(",")
+        scheduler.add_job(func=run_notif_scheduler_task,args=(scheduler,id,token,temp_df["chat_id"].values[0],input_book_data,"dev",list_filter_ticket_code,temp_df["interval_scheduler"].values[0]),trigger="interval",minutes=int(temp_df["interval_scheduler"].values[0]),id=id)
 
 def get_scheduler_by_id_str(id) -> str:
 

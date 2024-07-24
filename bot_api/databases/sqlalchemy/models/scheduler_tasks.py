@@ -8,6 +8,7 @@ class SchedulerTasks(Base):
 
     id = Column(Text, primary_key=True, index=True, default=uuid4)
     chat_id = Column(Text,nullable=False)
+    list_ticket_code = Column(Text,nullable=False)
     origin = Column(Text,default=False)
     destination = Column(Text,default=False)
     depart_date = Column(Text,default=False)
