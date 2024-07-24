@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 def get_ticket_data(book_data:dict,stage,list_filter_ticket_code) -> pd.DataFrame:
     book_date = datetime.strptime(book_data["depart_date"], "%d-%m-%Y").date()
     now_date = datetime.today().date()
-
+    logger.info(f'Check in func list_filterticket : {list_filter_ticket_code}, type : {type(list_filter_ticket_code)}')
     if(now_date <= book_date):
         content = get_api_booking_content(book_data)
         df_ticket_data = parse_request_api(content,list_filter_ticket_code)

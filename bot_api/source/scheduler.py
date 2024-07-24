@@ -73,6 +73,7 @@ def run_all_active_scheduler(token,scheduler:BackgroundScheduler):
             "depart_date" : temp_df["depart_date"].values[0],  
         }
         list_filter_ticket_code = (temp_df.loc[0,"list_ticket_code"]).split(",")
+        logger.info(f'Get from db list_filterticket : {list_filter_ticket_code}, type : {type(list_filter_ticket_code)}')
         scheduler.add_job(func=run_notif_scheduler_task,args=(scheduler,id,token,temp_df["chat_id"].values[0],input_book_data,"dev",list_filter_ticket_code,temp_df["interval_scheduler"].values[0]),trigger="interval",minutes=int(temp_df["interval_scheduler"].values[0]),id=id)
 
 def get_scheduler_by_id_str(id) -> str:
