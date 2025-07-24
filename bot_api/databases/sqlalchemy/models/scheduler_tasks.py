@@ -1,11 +1,14 @@
-from databases.sqlalchemy.models import Base
 from uuid import uuid4
 from sqlalchemy import Boolean, Integer,Column, DateTime, ForeignKey, Uuid, Text,func
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import MetaData
+
+metadata_obj = MetaData(schema="kai_notif")
+Base = declarative_base(metadata=metadata_obj)
 
 
 class SchedulerTasks(Base):
     __tablename__ = "scheduler_tasks"
-    __table_args__ = {"schema": "kai_notif"}
 
     id = Column(Text, primary_key=True, index=True, default=uuid4)
     chat_id = Column(Text,nullable=False)
