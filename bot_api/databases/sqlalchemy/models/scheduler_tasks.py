@@ -5,6 +5,7 @@ from sqlalchemy import Boolean, Integer,Column, DateTime, ForeignKey, Uuid, Text
 
 class SchedulerTasks(Base):
     __tablename__ = "scheduler_tasks"
+    __table_args__ = {"schema": "kai_notif"}
 
     id = Column(Text, primary_key=True, index=True, default=uuid4)
     chat_id = Column(Text,nullable=False)

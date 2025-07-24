@@ -5,6 +5,7 @@ from sqlalchemy import Boolean, Integer,Column, DateTime, ForeignKey, Uuid, Text
 
 class Stations(Base):
     __tablename__ = "stations"
+    __table_args__ = {"schema": "kai_notif"}
 
     code = Column(Text, primary_key=True, index=True)
     name = Column(Text,nullable=False)

@@ -33,8 +33,5 @@ db_url = URL.create(
 )
 
 DB_ENGINE = create_engine(
-    url=db_url,
-    pool_size=5,
-    max_overflow=10,
-    connect_args={"options": "-csearch_path={}".format(PG_SCHEMA)},
+    url=db_url
 )
